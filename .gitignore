@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Project specific data and weights
+data/raw/
+data/train/
+data/val/
+data/test/
+
+# Model checkpoints and logs
+outputs/models/*.pth
+outputs/models/*.pt
+outputs/reports/*.csv
+outputs/reports/*.txt
+outputs/plots/*.png
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
