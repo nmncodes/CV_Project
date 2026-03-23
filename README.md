@@ -46,27 +46,28 @@ plant_disease_cnn/
   run_train.sh
 ```
 
-## 3. CNN Explanation (Custom Model)
+## 3. CNN Explanation (ResNet-18 Based Custom Model)
 
-The custom CNN follows this flow:
-1. Convolution -> ReLU -> MaxPool
-2. Convolution -> ReLU -> MaxPool
-3. Convolution -> ReLU -> MaxPool
-4. Flatten
-5. Dense(512) + Dropout
-6. Dense(num_classes)
+The custom CNN uses a **ResNet-18** backbone (pretrained or from scratch) with a customized classification head for plant disease identification.
 
-It learns spatial disease patterns from scratch and acts as a baseline model.
+Features include:
+- **ResNet-18 Feature Extraction**: Advanced residual learning for deep feature capture.
+- **Customized Head**: `Dropout(0.35) -> Linear(512-256) -> ReLU -> Dropout(0.20) -> Linear(256-classes)`.
+- **Optimization**: AdamW optimizer with Label Smoothing and Cosine Annealing Learning Rate Scheduler.
+- **Fine-tuning**: Selective layer unfreezing (e.g., `--cnn_unfreeze_last_stage`) to adapt the model more closely to leaf morphology.
 
-## 4. Transfer Learning Explanation (MobileNetV2)
+This model is the primary choice for the current phase of the project, focusing on balancing accuracy and training time.
 
-MobileNetV2 is pretrained on ImageNet and provides efficient feature extraction.
+## 4. Transfer Learning (MobileNetV2 - Disabled by Default)
 
-Training strategy:
-1. Freeze backbone and train classification head first.
-2. Unfreeze last MobileNet blocks and fine-tune with lower learning rate.
+MobileNetV2 is a lightweight architecture optimized for mobile and embedded vision applications. In this project, it is available for comparative studies but currently kept inactive unless manually enabled.
 
-This usually converges faster and performs better than training from scratch.
+Key Strategy:
+1. Frozen features for initial classification head stabilization.
+2. Two-phase fine-tuning by unfreezing the last 4 stage blocks.
+3. Adam optimizer with Early Stopping.
+
+This model serves as a performance benchmark against the custom ResNet-based CNN.
 
 ## 5. Dataset Description
 
@@ -95,43 +96,87 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 7. Training Commands
+## 7. Training & CLI Commands
 
-Run individual model training:
+The training script `src/train.py` supports several flags to customize performance:
 
+**Train CNN (Current Focus):**
 ```bash
 python src/train.py --model cnn
+```
+
+**Custom CNN Options (advanced):**
+- `--cnn_unfreeze_last_stage`: Fine-tunes the last layer group of the CNN.
+- `--cnn_class_weights`: Adjusts loss for imbalanced disease categories.
+- `--cnn_balanced_sampling`: Oversampling for infrequent disease classes.
+
+**Quick Mode (CPU testing):**
+```bash
+python src/train.py --model cnn --quick
+```
+Runs fewer epochs with smaller 160x160 images for rapid validation.
+
+**Full Dataset (KaggleHub download):**
+```bash
+python src/train.py --model cnn --use_all_classes
+```
+
+**MobileNet Support (inactive):**
+```bash
 python src/train.py --model mobilenet
 ```
 
-Run with all PlantVillage classes:
-
-```bash
-python src/train.py --model mobilenet --use_all_classes
-```
-
-Run complete pipeline:
-
+**Run everything (bash wrapper):**
 ```bash
 bash run_train.sh
 ```
 
-## 8. Evaluation Command
+## 8. Evaluation & Visualization
 
+Evaluate and generate reports:
 ```bash
 python src/evaluate.py
 ```
 
 Evaluation outputs include:
-- Accuracy vs Epoch plot
-- Loss vs Epoch plot
-- Confusion Matrix
-- Classification Report (precision, recall, f1)
-- Model comparison CSV table
-- Sample predictions grid (12 images)
-- Grad-CAM visualizations (MobileNetV2)
+- Training History (Loss/Accuracy plots)
+- Confusion Matrix & Classification Report (`precision`, `recall`, `f1`)
+- Model Comparison Summary (in CLI and `outputs/reports/model_comparison.csv`)
+- Sample Predictions Grid (visualize predictions vs grounds truth)
+- Grad-CAM heatmaps (Explainability - see where the model "looks")
 
-## 9. Expected Terminal Logs
+## 9. Live Demo (Professor-Friendly Input -> Output)
+
+For a quick in-class demonstration:
+
+1. Train quickly on the existing split (small, fast run):
+
+```bash
+python src/train.py --model cnn --quick --epochs 1
+```
+
+2. Run one-image inference and print prediction output:
+
+```bash
+python src/demo_sample_io.py --model cnn
+```
+
+Optional: use a specific image path for a manual demo:
+
+```bash
+python src/demo_sample_io.py --model cnn --image data/test/Tomato_healthy/<your_image>.jpg
+```
+
+This prints:
+- Input image path
+- Predicted class label
+- Confidence score
+- Top-k prediction list
+
+and saves a visual output to:
+- `outputs/plots/demo_single_prediction.png`
+
+## 10. Expected Terminal Logs
 
 During training you will see logs like:
 
@@ -152,7 +197,7 @@ cnn: Accuracy=XX.XX% | Precision=... | Recall=... | F1=...
 mobilenet: Accuracy=XX.XX% | Precision=... | Recall=... | F1=...
 ```
 
-## 10. Output Artifacts
+## 11. Output Artifacts
 
 Saved files:
 - `outputs/models/best_cnn.pth`
@@ -161,10 +206,11 @@ Saved files:
 - `outputs/plots/confusion_matrix.png`
 - `outputs/plots/sample_predictions.png`
 - `outputs/plots/gradcam_mobilenet.png`
+- `outputs/plots/demo_single_prediction.png`
 - `outputs/reports/classification_report_*.txt`
 - `outputs/reports/model_comparison.csv`
 
-## 11. Training Procedure Summary (for Viva)
+## 12. Training Procedure Summary (for Viva)
 
 1. Prepare and split dataset (70/15/15)
 2. Apply normalization + augmentation
@@ -174,7 +220,7 @@ Saved files:
 6. Compare models using accuracy, precision, recall, f1
 7. Use Grad-CAM to explain model attention regions
 
-## 12. Future Improvements
+## 13. Future Improvements
 
 - Hyperparameter tuning (learning rate schedulers, weight decay)
 - Class balancing for skewed classes
